@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/name: hello-world
+  name: hello-world
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: hello-world
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: hello-world
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9113"
+    spec:
+      containers:
+        - image: nginxdemos/hello:0.4
+          name: hello-world
+          ports:
+            - name: http
+              containerPort: 80
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/nginx/conf.d/status.conf
+              subPath: status.conf
+        - image: nginx/nginx-prometheus-exporter:1.3
+          name: nginx-prometheus-exporter
+          args:
+            - "--nginx.scrape-uri=http://localhost:8080/stub_status"
+          ports:
+            - name: metrics
+              containerPort: 9113
+      volumes:
+        - name: config-volume
+          configMap:
+            name: nginx-config
+            items:
+              - key: status.conf
+                path: status.conf
